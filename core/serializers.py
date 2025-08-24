@@ -172,3 +172,7 @@ class LogoutSerializer(serializers.Serializer):
             token.blacklist()  # Revoga o refresh token
         except Exception:
             raise serializers.ValidationError("Token inválido ou já expirado")
+
+class SocialLoginSerializer(serializers.Serializer):
+    provider = serializers.ChoiceField(choices=["google", "apple"])
+    id_token = serializers.CharField()

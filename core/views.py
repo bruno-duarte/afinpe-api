@@ -6,8 +6,10 @@ from rest_framework.filters import OrderingFilter
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .serializers import RegistrationSerializer, LogoutSerializer
+from .serializers import RegistrationSerializer, LogoutSerializer, SocialLoginSerializer
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+
+import requests
 
 from .models import (
     Person, Color, Icon, Bank, Currency, BankAccount, BankAccountLimit,
@@ -156,3 +158,75 @@ class GoalTransactionViewSet(BaseModelViewSet):
 class AlertViewSet(BaseModelViewSet):
     queryset = Alert.objects.all()
     serializer_class = AlertSerializer
+
+class SocialLoginViewSet(viewsets.ViewSet):
+    """
+    ViewSet para login social com Google e Apple
+    """
+
+    def create(self, request):
+        serializer = SocialLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        provider = serializer.validated_data["provider"]
+        token = serializer.validated_data["token"]
+
+        if provider == "google":
+            user_info = self._validate_google_token(token)
+        elif provider == "apple":
+            user_info = self._validate_apple_token(token)
+        else:
+            return Response(
+                {"error": "Provedor inválido"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not user_info:
+            return Response(
+                {"error": "Token inválido"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        try:
+            user = User.objects.get(email=user_info["email"])
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Usuário não encontrado"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # aqui você pode gerar o JWT ou usar sua forma de autenticação
+        return Response(
+            {
+                "message": "Login realizado com sucesso",
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.first_name,
+                },
+            }
+        )
+
+    def _validate_google_token(self, token):
+        response = requests.get(
+            "https://oauth2.googleapis.com/tokeninfo",
+            params={"id_token": token},
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return {"email": data["email"], "name": data.get("name")}
+        return None
+
+    def _validate_apple_token(self, token):
+        # Aqui pode usar pyjwt para verificar o JWT da Apple
+        # ou consultar o endpoint da Apple
+        # Exemplo simplificado:
+        try:
+            import jwt
+
+            # você precisará buscar a chave pública da Apple:
+            # https://appleid.apple.com/auth/keys
+            decoded = jwt.decode(token, options={"verify_signature": False})
+            return {"email": decoded.get("email")}
+        except Exception:
+            return None
