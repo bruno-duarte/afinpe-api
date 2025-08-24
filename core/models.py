@@ -7,7 +7,6 @@ class Person(models.Model):
     firstName = models.TextField(null=True, blank=True)
     lastName = models.TextField(null=True, blank=True)
     fullName = models.TextField()
-    email = models.TextField(unique=True, null=True, blank=True)
     image = models.TextField(null=True, blank=True)
     status = models.IntegerField(default=1)
 
@@ -19,8 +18,8 @@ class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=150, unique=True)  # maps 'login'
     # password provided by AbstractUser (hashed)
-    created = models.TextField(null=True, blank=True)
-    modified = models.TextField(null=True, blank=True)
+    created = models.TextField(null=True, blank=False)
+    modified = models.TextField(null=True, blank=False)
     person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="users")
 
     EMAIL_FIELD = "email"

@@ -5,6 +5,9 @@ from .models import (
     CreditCardFlag, CreditCard, Invoice, Category, Subcategory, Planning, Budget,
     Loan, Transaction, Goal, GoalTransaction, Alert
 )
+from django.contrib.auth.hashers import make_password
+from django.utils import timezone
+from rest_framework_simplejwt.tokens import RefreshToken
 
 class PersonSerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,10 +15,16 @@ class PersonSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class UserSerializer(serializers.ModelSerializer):
+    personId = serializers.UUIDField(source="person.id", read_only=True)
+
     class Meta:
         model = User
-        # Expose minimal safe fields
-        fields = ["id", "username", "email", "is_staff", "is_superuser", "person", "created", "modified"]
+        fields = ["id", "username", "email", "personId", "created", "modified"]
+        read_only_fields = ["id", "created", "modified", "personId"]
+
+    def update(self, instance, validated_data):
+        instance.modified = timezone.now().isoformat()
+        return super().update(instance, validated_data)
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -119,3 +128,47 @@ class AlertSerializer(serializers.ModelSerializer):
     class Meta:
         model = Alert
         fields = "__all__"
+
+class RegistrationSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(write_only=True)
+    firstName = serializers.CharField(required=False, allow_blank=True)
+    lastName = serializers.CharField(required=False, allow_blank=True)
+    image = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def create(self, validated_data):
+        full_name = f"{validated_data.get('firstName', '')} {validated_data.get('lastName', '')}".strip()
+
+        person = Person.objects.create(
+            firstName=validated_data.get("firstName", ""),
+            lastName=validated_data.get("lastName", ""),
+            fullName=full_name,
+            image=validated_data.get("image", ""),
+        )
+
+        user = User.objects.create(
+            username=validated_data["username"],
+            email=validated_data["email"],
+            password=make_password(validated_data["password"]),
+            person=person,
+            is_staff=False,
+            is_superuser=False,
+            created=timezone.now().isoformat(),
+            modified=timezone.now().isoformat(),
+        )
+        return user
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+    def validate(self, attrs):
+        self.token = attrs['refresh']
+        return attrs
+
+    def save(self, **kwargs):
+        try:
+            token = RefreshToken(self.token)
+            token.blacklist()  # Revoga o refresh token
+        except Exception:
+            raise serializers.ValidationError("Token inválido ou já expirado")

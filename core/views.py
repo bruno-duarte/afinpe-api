@@ -1,9 +1,13 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from .serializers import RegistrationSerializer, LogoutSerializer
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from .models import (
     Person, Color, Icon, Bank, Currency, BankAccount, BankAccountLimit,
@@ -15,7 +19,8 @@ from .serializers import (
     BankSerializer, CurrencySerializer, BankAccountSerializer, BankAccountLimitSerializer,
     CreditCardFlagSerializer, CreditCardSerializer, InvoiceSerializer, CategorySerializer,
     SubcategorySerializer, PlanningSerializer, BudgetSerializer, LoanSerializer,
-    TransactionSerializer, GoalSerializer, GoalTransactionSerializer, AlertSerializer
+    TransactionSerializer, GoalSerializer, GoalTransactionSerializer, AlertSerializer,
+    RegistrationSerializer
 )
 from .permissions import IsAdmin
 
@@ -31,24 +36,52 @@ class PersonViewSet(BaseModelViewSet):
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
 
-class UserViewSet(BaseModelViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
-    @action(detail=False, methods=["post"], permission_classes=[permissions.AllowAny])
-    def signup(self, request):
-        serializer = UserCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save(is_staff=False, is_superuser=False)
-            return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=["post"], permission_classes=[IsAdmin])
-    def admin_create_user(self, request):
-        serializer = UserCreateSerializer(data=request.data)
+    @extend_schema(
+    request=RegistrationSerializer,
+    responses=OpenApiResponse(
+        response=UserSerializer,
+        description="Usuário criado com tokens JWT",
+        examples=[
+            OpenApiExample(
+                'Exemplo de registro com tokens',
+                value={
+                    "id": "uuid-user",
+                    "username": "joao123",
+                    "email": "joao@email.com",
+                    "personId": "uuid-person",
+                    "created": "2025-08-24T10:15:00Z",
+                    "modified": "2025-08-24T10:15:00Z",
+                    "access": "jwt-access-token",
+                    "refresh": "jwt-refresh-token"
+                }
+            )
+        ]
+    )
+)
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
+    def register(self, request):
+        serializer = RegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+            refresh = RefreshToken.for_user(user)
+            token_data = {"refresh": str(refresh), "access": str(refresh.access_token)}
+
+            response_data = UserSerializer(user).data
+            response_data.update(token_data)
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
+    def logout(self, request):
+        serializer = LogoutSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Logout realizado com sucesso"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ColorViewSet(BaseModelViewSet):
