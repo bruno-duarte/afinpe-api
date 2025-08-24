@@ -41,6 +41,8 @@ media/
 staticfiles/
 *.env
 
+# Migrations (opcional: se você quiser versionar, remova esta linha)
+*/migrations/*.py
 !*/migrations/__init__.py
 
 # VS Code
