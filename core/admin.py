@@ -1,0 +1,23 @@
+from django.contrib import admin
+from . import models
+
+admin.site.register(models.Person)
+admin.site.register(models.User)
+admin.site.register(models.Color)
+admin.site.register(models.Icon)
+admin.site.register(models.Bank)
+admin.site.register(models.Currency)
+admin.site.register(models.BankAccount)
+admin.site.register(models.BankAccountLimit)
+admin.site.register(models.CreditCardFlag)
+admin.site.register(models.CreditCard)
+admin.site.register(models.Invoice)
+admin.site.register(models.Category)
+admin.site.register(models.Subcategory)
+admin.site.register(models.Planning)
+admin.site.register(models.Budget)
+admin.site.register(models.Loan)
+admin.site.register(models.Transaction)
+admin.site.register(models.Goal)
+admin.site.register(models.GoalTransaction)
+admin.site.register(models.Alert)

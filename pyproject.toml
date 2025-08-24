@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+
+[project]
+name = "afinpe_api"
+version = "0.1.0"
+description = "Django + DRF afinpe API with JWT, Postgres, Docker, filtering/pagination/ordering, CORS, versioning, and Swagger."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "Django>=5.0,<6.0",
+    "djangorestframework>=3.15",
+    "djangorestframework-simplejwt>=5.3",
+    "django-filter>=24.2",
+    "drf-spectacular>=0.27",
+    "psycopg2-binary>=2.9",
+    "python-dotenv>=1.0",
+    "django-cors-headers>=4.3",
+]
