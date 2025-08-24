@@ -32,9 +32,10 @@ class BaseModelViewSet(viewsets.ModelViewSet):
     filterset_fields = "__all__"
     ordering_fields = "__all__"
 
-class PersonViewSet(BaseModelViewSet):
+class PersonViewSet(viewsets.ModelViewSet):
     queryset = Person.objects.all()
     serializer_class = PersonSerializer
+    http_method_names = ['get', 'put', 'patch', 'delete']
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
