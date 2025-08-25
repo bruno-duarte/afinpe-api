@@ -8,7 +8,7 @@ from .views import (
     BankAccountViewSet, BankAccountLimitViewSet, CreditCardFlagViewSet, CreditCardViewSet,
     InvoiceViewSet, CategoryViewSet, SubcategoryViewSet, PlanningViewSet, BudgetViewSet,
     LoanViewSet, TransactionViewSet, GoalViewSet, GoalTransactionViewSet, AlertViewSet,
-    SocialLoginViewSet
+    SocialLoginViewSet, LoginViewSet
 )
 
 router = DefaultRouter()
@@ -32,7 +32,8 @@ router.register(r"transactions", TransactionViewSet, basename="transaction")
 router.register(r"goals", GoalViewSet, basename="goal")
 router.register(r"goal-transactions", GoalTransactionViewSet, basename="goaltransaction")
 router.register(r"alerts", AlertViewSet, basename="alert")
-router.register("auth/social", SocialLoginViewSet, basename="social-auth")
+router.register(r"auth/social", SocialLoginViewSet, basename="social-auth")
+router.register(r"auth/jwt/login", LoginViewSet, basename="jwt-login")
 
 urlpatterns = [
     # Auth endpoints (JWT)

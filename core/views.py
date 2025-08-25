@@ -6,7 +6,10 @@ from rest_framework.filters import OrderingFilter
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .serializers import RegistrationSerializer, LogoutSerializer, SocialLoginSerializer
+from .serializers import (
+    RegistrationSerializer, LogoutSerializer, SocialLoginSerializer, 
+    MyTokenObtainPairSerializer
+)
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 import requests
@@ -230,3 +233,16 @@ class SocialLoginViewSet(viewsets.ViewSet):
             return {"email": decoded.get("email")}
         except Exception:
             return None
+        
+class LoginViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=MyTokenObtainPairSerializer,  # serializer que define username/password
+        responses=MyTokenObtainPairSerializer,  # mostra o que será retornado
+        description="Login do usuário retornando JWT e dados do usuário"
+    )
+    def create(self, request):
+        serializer = MyTokenObtainPairSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)

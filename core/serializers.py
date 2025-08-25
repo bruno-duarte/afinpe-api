@@ -8,6 +8,7 @@ from .models import (
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class PersonSerializer(serializers.ModelSerializer):
     class Meta:
@@ -176,3 +177,22 @@ class LogoutSerializer(serializers.Serializer):
 class SocialLoginSerializer(serializers.Serializer):
     provider = serializers.ChoiceField(choices=["google", "apple"])
     id_token = serializers.CharField()
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Serializer para retornar access/refresh + dados do usuário
+    """
+    def validate(self, attrs):
+        data = super().validate(attrs)  # retorna access/refresh
+
+        # Adiciona os dados do usuário
+        user = self.user
+        data.update({
+            "id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "first_name": getattr(user, "first_name", ""),
+            "last_name": getattr(user, "last_name", ""),
+            "personId": str(user.person.id) if user.person else None,
+        })
+        return data
