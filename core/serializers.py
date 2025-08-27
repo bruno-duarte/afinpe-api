@@ -86,9 +86,28 @@ class InvoiceSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class CategorySerializer(serializers.ModelSerializer):
+    iconId = serializers.PrimaryKeyRelatedField(
+        source="icon", queryset=Icon.objects.all(), write_only=True
+    )
+    colorId = serializers.PrimaryKeyRelatedField(
+        source="color", queryset=Color.objects.all(), write_only=True
+    )
+    userId = serializers.PrimaryKeyRelatedField(
+        source="user", queryset=User.objects.all(), write_only=True
+    )
+
     class Meta:
         model = Category
-        fields = "__all__"
+        fields = ["id", "description", "type", "iconId", "colorId", "userId"]
+
+    def create(self, validated_data):
+        return Category.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 class SubcategorySerializer(serializers.ModelSerializer):
     class Meta:

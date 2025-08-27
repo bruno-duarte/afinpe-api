@@ -1,8 +1,6 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import OrderingFilter
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -27,15 +25,9 @@ from .serializers import (
     TransactionSerializer, GoalSerializer, GoalTransactionSerializer, AlertSerializer,
     RegistrationSerializer
 )
-from .permissions import IsAdmin
+from .base import OptionalPaginationViewSet, BaseModelViewSet
 
 User = get_user_model()
-
-class BaseModelViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = "__all__"
-    ordering_fields = "__all__"
 
 class PersonViewSet(viewsets.ModelViewSet):
     queryset = Person.objects.all()
@@ -90,11 +82,11 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Logout realizado com sucesso"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ColorViewSet(BaseModelViewSet):
+class ColorViewSet(OptionalPaginationViewSet):
     queryset = Color.objects.all()
     serializer_class = ColorSerializer
 
-class IconViewSet(BaseModelViewSet):
+class IconViewSet(OptionalPaginationViewSet):
     queryset = Icon.objects.all()
     serializer_class = IconSerializer
 
@@ -126,7 +118,7 @@ class InvoiceViewSet(BaseModelViewSet):
     queryset = Invoice.objects.all()
     serializer_class = InvoiceSerializer
 
-class CategoryViewSet(BaseModelViewSet):
+class CategoryViewSet(OptionalPaginationViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
