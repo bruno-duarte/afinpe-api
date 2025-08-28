@@ -85,6 +85,11 @@ class InvoiceSerializer(serializers.ModelSerializer):
         model = Invoice
         fields = "__all__"
 
+class SubcategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subcategory
+        fields = "__all__"
+
 class CategorySerializer(serializers.ModelSerializer):
     iconId = serializers.PrimaryKeyRelatedField(
         source="icon", queryset=Icon.objects.all(), write_only=True
@@ -96,23 +101,34 @@ class CategorySerializer(serializers.ModelSerializer):
         source="user", queryset=User.objects.all(), write_only=True
     )
 
+    color = ColorSerializer(read_only=True)
+    icon = IconSerializer(read_only=True)
+    subcategories = SubcategorySerializer(many=True, read_only=True)
+
     class Meta:
         model = Category
-        fields = ["id", "description", "type", "iconId", "colorId", "userId"]
+        fields = [
+            "id",
+            "description",
+            "type",
+            "iconId",
+            "colorId",
+            "userId",
+            "color",
+            "icon",
+            "subcategories",
+        ]
 
     def create(self, validated_data):
-        return Category.objects.create(**validated_data)
+        category = Category.objects.create(**validated_data)
+        return Category.objects.select_related("color", "icon").prefetch_related("subcategories").get(pk=category.pk)
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        return instance
+        return Category.objects.select_related("color", "icon").prefetch_related("subcategories").get(pk=instance.pk)
 
-class SubcategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Subcategory
-        fields = "__all__"
 
 class PlanningSerializer(serializers.ModelSerializer):
     class Meta:

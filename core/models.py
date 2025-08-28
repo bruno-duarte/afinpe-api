@@ -125,6 +125,9 @@ class Subcategory(models.Model):
     icon = models.ForeignKey(Icon, on_delete=models.PROTECT)
     color = models.ForeignKey(Color, on_delete=models.PROTECT)
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    category = models.ForeignKey(
+        Category, related_name="subcategories", on_delete=models.CASCADE
+    )
 
 class Planning(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
