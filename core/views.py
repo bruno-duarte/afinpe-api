@@ -122,7 +122,7 @@ class CategoryViewSet(OptionalPaginationViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
-class SubcategoryViewSet(BaseModelViewSet):
+class SubcategoryViewSet(OptionalPaginationViewSet):
     queryset = Subcategory.objects.all()
     serializer_class = SubcategorySerializer
 

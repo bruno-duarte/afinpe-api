@@ -86,9 +86,47 @@ class InvoiceSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class SubcategorySerializer(serializers.ModelSerializer):
+    categoryId = serializers.PrimaryKeyRelatedField(
+        source="category", queryset=Category.objects.all(), write_only=True
+    )
+    iconId = serializers.PrimaryKeyRelatedField(
+        source="icon", queryset=Icon.objects.all(), write_only=True
+    )
+    colorId = serializers.PrimaryKeyRelatedField(
+        source="color", queryset=Color.objects.all(), write_only=True
+    )
+    userId = serializers.PrimaryKeyRelatedField(
+        source="user", queryset=User.objects.all(), write_only=True
+    )
+
+    # retornos
+    color = ColorSerializer(read_only=True)
+    icon = IconSerializer(read_only=True)
+    categoryId = serializers.UUIDField(source="category.id", read_only=True)
+    userId = serializers.UUIDField(source="user.id", read_only=True)
+
     class Meta:
         model = Subcategory
-        fields = "__all__"
+        fields = [
+            "id",
+            "description",
+            "categoryId",
+            "iconId",
+            "colorId",
+            "userId",
+            "color",
+            "icon",
+        ]
+    
+    def create(self, validated_data):
+        subcategory = Subcategory.objects.create(**validated_data)
+        return Subcategory.objects.select_related("color", "icon").get(pk=subcategory.pk)
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return Subcategory.objects.select_related("color", "icon").get(pk=instance.pk)
 
 class CategorySerializer(serializers.ModelSerializer):
     iconId = serializers.PrimaryKeyRelatedField(
