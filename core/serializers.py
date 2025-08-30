@@ -99,11 +99,9 @@ class SubcategorySerializer(serializers.ModelSerializer):
         source="user", queryset=User.objects.all(), write_only=True
     )
 
-    # retornos
     color = ColorSerializer(read_only=True)
     icon = IconSerializer(read_only=True)
-    categoryId = serializers.UUIDField(source="category.id", read_only=True)
-    userId = serializers.UUIDField(source="user.id", read_only=True)
+    user = UserSerializer(read_only=True)
 
     class Meta:
         model = Subcategory
@@ -116,17 +114,17 @@ class SubcategorySerializer(serializers.ModelSerializer):
             "userId",
             "color",
             "icon",
+            "user",
         ]
-    
-    def create(self, validated_data):
-        subcategory = Subcategory.objects.create(**validated_data)
-        return Subcategory.objects.select_related("color", "icon").get(pk=subcategory.pk)
 
-    def update(self, instance, validated_data):
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return Subcategory.objects.select_related("color", "icon").get(pk=instance.pk)
+    def to_representation(self, instance):
+        """
+        Customiza a representação do objeto para incluir 'categoryId'.
+        """
+        representation = super().to_representation(instance)
+        representation['categoryId'] = instance.category.id
+        
+        return representation
 
 class CategorySerializer(serializers.ModelSerializer):
     iconId = serializers.PrimaryKeyRelatedField(
