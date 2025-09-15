@@ -90,15 +90,15 @@ class IconViewSet(OptionalPaginationViewSet):
     queryset = Icon.objects.all()
     serializer_class = IconSerializer
 
-class BankViewSet(BaseModelViewSet):
+class BankViewSet(OptionalPaginationViewSet):
     queryset = Bank.objects.all()
     serializer_class = BankSerializer
 
-class CurrencyViewSet(BaseModelViewSet):
+class CurrencyViewSet(OptionalPaginationViewSet):
     queryset = Currency.objects.all()
     serializer_class = CurrencySerializer
 
-class BankAccountViewSet(BaseModelViewSet):
+class BankAccountViewSet(OptionalPaginationViewSet):
     queryset = BankAccount.objects.all()
     serializer_class = BankAccountSerializer
 

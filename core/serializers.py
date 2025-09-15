@@ -61,9 +61,63 @@ class CurrencySerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class BankAccountSerializer(serializers.ModelSerializer):
+    colorId = serializers.PrimaryKeyRelatedField(
+        source="color", queryset=Color.objects.all(), write_only=True
+    )
+    userId = serializers.PrimaryKeyRelatedField(
+        source="user", queryset=User.objects.all(), write_only=True
+    )
+    bankId = serializers.PrimaryKeyRelatedField(
+        source="bank", queryset=Bank.objects.all(), write_only=True, allow_null=True, required=False
+    )
+    currencyId = serializers.PrimaryKeyRelatedField(
+        source="currency", queryset=Currency.objects.all(), write_only=True
+    )
+
+    color = ColorSerializer(read_only=True)
+    user = UserSerializer(read_only=True)
+    bank = BankSerializer(read_only=True)
+    currency = CurrencySerializer(read_only=True)
+
     class Meta:
         model = BankAccount
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "type",
+            "operation",
+            "accountNumber",
+            "accountDigit",
+            "agencyNumber",
+            "agencyDigit",
+            "initialBalance",
+            "created",
+            "modified",
+            "bankId",
+            "colorId",
+            "userId",
+            "currencyId",
+            "bank",
+            "color",
+            "user",
+            "currency",
+            "bankJson",
+            "status",
+        ]
+
+    def create(self, validated_data):
+        account = BankAccount.objects.create(**validated_data)
+        return BankAccount.objects.select_related(
+            "color", "user", "bank", "currency"
+        ).get(pk=account.pk)
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return BankAccount.objects.select_related(
+            "color", "user", "bank", "currency"
+        ).get(pk=instance.pk)
 
 class BankAccountLimitSerializer(serializers.ModelSerializer):
     class Meta:
