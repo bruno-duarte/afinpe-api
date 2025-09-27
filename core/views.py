@@ -106,11 +106,11 @@ class BankAccountLimitViewSet(BaseModelViewSet):
     queryset = BankAccountLimit.objects.all()
     serializer_class = BankAccountLimitSerializer
 
-class CreditCardFlagViewSet(BaseModelViewSet):
+class CreditCardFlagViewSet(OptionalPaginationViewSet):
     queryset = CreditCardFlag.objects.all()
     serializer_class = CreditCardFlagSerializer
 
-class CreditCardViewSet(BaseModelViewSet):
+class CreditCardViewSet(OptionalPaginationViewSet):
     queryset = CreditCard.objects.all()
     serializer_class = CreditCardSerializer
 

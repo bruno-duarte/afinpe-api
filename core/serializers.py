@@ -130,9 +130,36 @@ class CreditCardFlagSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class CreditCardSerializer(serializers.ModelSerializer):
+    bankAccountId = serializers.PrimaryKeyRelatedField(
+        source="bankAccount", queryset=BankAccount.objects.all(), write_only=True
+    )
+    creditCardFlagId = serializers.PrimaryKeyRelatedField(
+        source="creditCardFlag", queryset=CreditCardFlag.objects.all(), write_only=True
+    )
+    userId = serializers.PrimaryKeyRelatedField(
+        source="user", queryset=User.objects.all(), write_only=True
+    )
+
+    bankAccount = BankAccountSerializer(read_only=True)
+    creditCardFlag = CreditCardFlagSerializer(read_only=True)
+
     class Meta:
         model = CreditCard
-        fields = "__all__"
+        fields = [
+            "id",
+            "created",
+            "modified",
+            "name",
+            "limitValue",
+            "closingDay",
+            "dueDate",
+            "status",
+            "bankAccount",
+            "bankAccountId",
+            "creditCardFlagId",
+            "creditCardFlag",
+            "userId",
+        ]
 
 class InvoiceSerializer(serializers.ModelSerializer):
     class Meta:
