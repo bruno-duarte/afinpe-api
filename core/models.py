@@ -191,11 +191,11 @@ class Transaction(models.Model):
 
 class Goal(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    created = models.TextField()
-    modified = models.TextField()
-    completionDate = models.IntegerField()
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+    completionDate = models.TextField()
     type = models.IntegerField()
-    description = models.IntegerField()
+    description = models.TextField()
     aimValue = models.IntegerField()
     image = models.TextField(null=True, blank=True)
     rememberDay = models.IntegerField(null=True, blank=True)

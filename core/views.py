@@ -142,7 +142,7 @@ class TransactionViewSet(BaseModelViewSet):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
 
-class GoalViewSet(BaseModelViewSet):
+class GoalViewSet(OptionalPaginationViewSet):
     queryset = Goal.objects.all()
     serializer_class = GoalSerializer
 

@@ -268,9 +268,54 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class GoalSerializer(serializers.ModelSerializer):
+    bankAccountId = serializers.PrimaryKeyRelatedField(
+        source="bankAccount", queryset=BankAccount.objects.all(), write_only=True
+    )
+    iconId = serializers.PrimaryKeyRelatedField(
+        source="icon", queryset=Icon.objects.all(), write_only=True
+    )
+    colorId = serializers.PrimaryKeyRelatedField(
+        source="color", queryset=Color.objects.all(), write_only=True
+    )
+    userId = serializers.PrimaryKeyRelatedField(
+        source="user", queryset=User.objects.all(), write_only=True
+    )
+
+    bankAccount = BankAccountSerializer(read_only=True)
+    color = ColorSerializer(read_only=True)
+    icon = IconSerializer(read_only=True)
+
     class Meta:
         model = Goal
-        fields = "__all__"
+        fields = [
+            "id",
+            "created",
+            "modified",
+            "completionDate",
+            "type",
+            "description",
+            "aimValue",
+            "image",
+            "rememberDay",
+            "initialValue",
+            "bankAccountId",
+            "iconId",
+            "colorId",
+            "userId",
+            "bankAccount",
+            "color",
+            "icon",
+        ]
+
+    def create(self, validated_data):
+        goal = Goal.objects.create(**validated_data)
+        return Goal.objects.select_related("bankAccount", "color", "icon").get(pk=goal.pk)
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return Goal.objects.select_related("bankAccount", "color", "icon").get(pk=instance.pk)
 
 class GoalTransactionSerializer(serializers.ModelSerializer):
     class Meta:
