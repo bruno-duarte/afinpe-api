@@ -263,9 +263,70 @@ class LoanSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class TransactionSerializer(serializers.ModelSerializer):
+    userId = serializers.PrimaryKeyRelatedField(
+        source="user", queryset=User.objects.all(), write_only=True
+    )
+
+    invoiceId = serializers.PrimaryKeyRelatedField(
+        source="invoice", queryset=Invoice.objects.all(), write_only=True,required=False, allow_null=True
+    )
+
+    bankAccountId = serializers.PrimaryKeyRelatedField(
+        source="bankAccount", queryset=BankAccount.objects.all(), write_only=True
+    )
+
+    categoryId = serializers.PrimaryKeyRelatedField(
+        source="category", queryset=Category.objects.all(), write_only=True
+    )
+
+    subcategoryId = serializers.PrimaryKeyRelatedField(
+        source="subcategory", queryset=Subcategory.objects.all(), write_only=True,required=False, allow_null=True
+    )
+
+    loanId = serializers.PrimaryKeyRelatedField(
+        source="loan", queryset=Loan.objects.all(), write_only=True, required=False, allow_null=True
+    )
+
+    bankAccount = BankAccountSerializer(read_only=True)
+    category = CategorySerializer(read_only=True)
+    subcategory = SubcategorySerializer(read_only=True)
+
     class Meta:
         model = Transaction
-        fields = "__all__"
+        fields = [
+            "id",
+            "created",
+            "modified",
+            "date",
+            "description",
+            "originalValue",
+            "value",
+            "observation",
+            "ignore",
+            "isTransfer",
+            "isCreditCardTransaction",
+            "paid",
+            "fixed",
+            "fixedDay",
+            "type",
+            "paymentDate",
+            "groupingId",
+            "invoiceNumber",
+            "isReturn",
+            "invoiceValue",
+            "originalDate",
+            "partialPaymentId",
+            "canEdit",
+            "bankAccountId",
+            "invoiceId",
+            "categoryId",
+            "subcategoryId",
+            "loanId",
+            "userId",
+            "category",
+            "bankAccount",
+            "subcategory",
+        ]
 
 class GoalSerializer(serializers.ModelSerializer):
     bankAccountId = serializers.PrimaryKeyRelatedField(

@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 
 class Person(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -160,8 +161,10 @@ class Loan(models.Model):
 
 class Transaction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    created = models.TextField()
-    modified = models.TextField()
+    
+    created = models.TextField(editable=False)
+    modified = models.TextField(editable=False)
+    
     date = models.TextField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     originalValue = models.IntegerField(null=True, blank=True)
@@ -175,19 +178,31 @@ class Transaction(models.Model):
     fixedDay = models.IntegerField(null=True, blank=True)
     type = models.IntegerField()
     paymentDate = models.TextField(null=True, blank=True)
-    invoice = models.ForeignKey(Invoice, null=True, blank=True, on_delete=models.CASCADE)
-    bankAccount = models.ForeignKey(BankAccount, null=True, blank=True, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.SET_NULL)
-    groupingId = models.TextField(null=True, blank=True)
+    
+    invoice = models.ForeignKey('Invoice', null=True, blank=True, on_delete=models.CASCADE)
+    bankAccount = models.ForeignKey('BankAccount', null=True, blank=True, on_delete=models.CASCADE)
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
+    category = models.ForeignKey('Category', null=True, blank=True, on_delete=models.SET_NULL)
+    subcategory = models.ForeignKey('Subcategory', null=True, blank=True, on_delete=models.SET_NULL)
+    loan = models.ForeignKey('Loan', null=True, blank=True, on_delete=models.SET_NULL)
+
+    groupingId = models.UUIDField(default=uuid.uuid4, null=True, blank=True)
     invoiceNumber = models.IntegerField(null=True, blank=True)
     isReturn = models.IntegerField(null=True, blank=True)
     invoiceValue = models.IntegerField(null=True, blank=True)
     originalDate = models.TextField(null=True, blank=True)
     partialPaymentId = models.TextField(null=True, blank=True)
     canEdit = models.IntegerField(null=True, blank=True)
-    subcategory = models.ForeignKey(Subcategory, null=True, blank=True, on_delete=models.SET_NULL)
-    loan = models.ForeignKey(Loan, null=True, blank=True, on_delete=models.SET_NULL)
+
+    def save(self, *args, **kwargs):
+        now = timezone.now()
+        timestamp_str = now.isoformat() 
+
+        if not self.pk:
+            self.created = timestamp_str
+        
+        self.modified = timestamp_str
+        super().save(*args, **kwargs)
 
 class Goal(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
