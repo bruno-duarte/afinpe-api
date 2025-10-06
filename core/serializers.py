@@ -75,7 +75,6 @@ class BankAccountSerializer(serializers.ModelSerializer):
     )
 
     color = ColorSerializer(read_only=True)
-    user = UserSerializer(read_only=True)
     bank = BankSerializer(read_only=True)
     currency = CurrencySerializer(read_only=True)
 
@@ -99,7 +98,6 @@ class BankAccountSerializer(serializers.ModelSerializer):
             "currencyId",
             "bank",
             "color",
-            "user",
             "currency",
             "bankJson",
             "status",
@@ -182,7 +180,6 @@ class SubcategorySerializer(serializers.ModelSerializer):
 
     color = ColorSerializer(read_only=True)
     icon = IconSerializer(read_only=True)
-    user = UserSerializer(read_only=True)
 
     class Meta:
         model = Subcategory
@@ -195,7 +192,6 @@ class SubcategorySerializer(serializers.ModelSerializer):
             "userId",
             "color",
             "icon",
-            "user",
         ]
 
     def to_representation(self, instance):
