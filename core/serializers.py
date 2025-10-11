@@ -243,15 +243,78 @@ class CategorySerializer(serializers.ModelSerializer):
         return Category.objects.select_related("color", "icon").prefetch_related("subcategories").get(pk=instance.pk)
 
 
-class PlanningSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Planning
-        fields = "__all__"
-
 class BudgetSerializer(serializers.ModelSerializer):
+    categoryId = serializers.PrimaryKeyRelatedField(
+        source="category", queryset=Category.objects.all(), write_only=True
+    )
+    subcategoryId = serializers.PrimaryKeyRelatedField(
+        source="subcategory", queryset=Subcategory.objects.all(), write_only=True, allow_null=True, required=False
+    )
+    planningId = serializers.PrimaryKeyRelatedField(
+        source="planning", queryset=Planning.objects.all(), write_only=True
+    )
+
+    category = CategorySerializer(read_only=True)
+    subcategory = SubcategorySerializer(read_only=True)
+
     class Meta:
         model = Budget
-        fields = "__all__"
+        fields = [
+            "id",
+            "plannedValue",
+            "categoryId",
+            "subcategoryId",
+            "planningId",
+            "category",
+            "subcategory",
+        ]
+
+    def create(self, validated_data):
+        budget = Budget.objects.create(**validated_data)
+        return Budget.objects.select_related("category", "subcategory").get(pk=budget.pk)
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return Budget.objects.select_related("category", "subcategory").get(pk=instance.pk)
+
+
+class PlanningSerializer(serializers.ModelSerializer):
+    userId = serializers.PrimaryKeyRelatedField(
+        source="user", queryset=User.objects.all(), write_only=True
+    )
+    currencyId = serializers.PrimaryKeyRelatedField(
+        source="currency", queryset=Currency.objects.all(), write_only=True
+    )
+
+    user = UserSerializer(read_only=True)
+    currency = CurrencySerializer(read_only=True)
+    budgets = BudgetSerializer(many=True, read_only=True)  # Requer related_name="budgets" no Budget
+
+    class Meta:
+        model = Planning
+        fields = [
+            "id",
+            "month",
+            "year",
+            "monthlyIncome",
+            "userId",
+            "currencyId",
+            "user",
+            "currency",
+            "budgets",
+        ]
+
+    def create(self, validated_data):
+        planning = Planning.objects.create(**validated_data)
+        return Planning.objects.select_related("user", "currency").prefetch_related("budgets").get(pk=planning.pk)
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return Planning.objects.select_related("user", "currency").prefetch_related("budgets").get(pk=instance.pk)
 
 class LoanSerializer(serializers.ModelSerializer):
     class Meta:

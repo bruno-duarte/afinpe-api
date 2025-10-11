@@ -143,7 +143,7 @@ class Budget(models.Model):
     plannedValue = models.IntegerField()
     category = models.ForeignKey(Category, on_delete=models.PROTECT)
     subcategory = models.ForeignKey(Subcategory, null=True, blank=True, on_delete=models.SET_NULL)
-    planning = models.ForeignKey(Planning, on_delete=models.CASCADE)
+    planning = models.ForeignKey(Planning, on_delete=models.CASCADE, related_name="budgets")
 
 class Loan(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

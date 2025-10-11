@@ -126,11 +126,11 @@ class SubcategoryViewSet(OptionalPaginationViewSet):
     queryset = Subcategory.objects.all()
     serializer_class = SubcategorySerializer
 
-class PlanningViewSet(BaseModelViewSet):
+class PlanningViewSet(OptionalPaginationViewSet):
     queryset = Planning.objects.all()
     serializer_class = PlanningSerializer
 
-class BudgetViewSet(BaseModelViewSet):
+class BudgetViewSet(OptionalPaginationViewSet):
     queryset = Budget.objects.all()
     serializer_class = BudgetSerializer
 
