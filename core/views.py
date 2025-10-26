@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -114,7 +115,7 @@ class CreditCardViewSet(OptionalPaginationViewSet):
     queryset = CreditCard.objects.all()
     serializer_class = CreditCardSerializer
 
-class InvoiceViewSet(BaseModelViewSet):
+class InvoiceViewSet(OptionalPaginationViewSet):
     queryset = Invoice.objects.all()
     serializer_class = InvoiceSerializer
 
@@ -138,9 +139,22 @@ class LoanViewSet(BaseModelViewSet):
     queryset = Loan.objects.all()
     serializer_class = LoanSerializer
 
-class TransactionViewSet(BaseModelViewSet):
-    queryset = Transaction.objects.all()
+class TransactionViewSet(viewsets.ModelViewSet):
     serializer_class = TransactionSerializer
+
+    def get_queryset(self):
+        queryset = Transaction.objects.all()
+        search = self.request.query_params.get("search", None)
+
+        if search:
+            queryset = queryset.filter(
+                Q(description__icontains=search)
+                | Q(observation__icontains=search)
+                | Q(category__description__icontains=search)
+                | Q(subcategory__description__icontains=search)
+            )
+
+        return queryset
 
 class GoalViewSet(OptionalPaginationViewSet):
     queryset = Goal.objects.all()

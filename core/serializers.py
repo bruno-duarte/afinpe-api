@@ -160,9 +160,51 @@ class CreditCardSerializer(serializers.ModelSerializer):
         ]
 
 class InvoiceSerializer(serializers.ModelSerializer):
+    created = serializers.CharField(required=False, allow_blank=True)
+    modified = serializers.CharField(required=False, allow_blank=True)
+
+    userId = serializers.PrimaryKeyRelatedField(
+        source="user", queryset=User.objects.all(), write_only=True
+    )
+    creditCardId = serializers.PrimaryKeyRelatedField(
+        source="creditCard", queryset=CreditCard.objects.all(), write_only=True
+    )
+
+    user = UserSerializer(read_only=True)
+    creditCard = CreditCardSerializer(read_only=True)
+
     class Meta:
         model = Invoice
-        fields = "__all__"
+        fields = [
+            "id",
+            "created",
+            "modified",
+            "status",
+            "closingDate",
+            "dueDate",
+            "paymentDate",
+            "paymentAmount",
+            "creditCardId",
+            "userId",
+            "creditCard",
+            "user",
+        ]
+
+    def create(self, validated_data):
+        validated_data.setdefault("created", timezone.now().isoformat())
+        validated_data.setdefault("modified", timezone.now().isoformat())
+
+        invoice = Invoice.objects.create(**validated_data)
+        return Invoice.objects.select_related("creditCard", "user").get(pk=invoice.pk)
+
+    def update(self, instance, validated_data):
+        validated_data["modified"] = timezone.now().isoformat()
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        return Invoice.objects.select_related("creditCard", "user").get(pk=instance.pk)
 
 class SubcategorySerializer(serializers.ModelSerializer):
     categoryId = serializers.PrimaryKeyRelatedField(
@@ -323,32 +365,55 @@ class LoanSerializer(serializers.ModelSerializer):
 
 class TransactionSerializer(serializers.ModelSerializer):
     userId = serializers.PrimaryKeyRelatedField(
-        source="user", queryset=User.objects.all(), write_only=True
+        source="user",
+        queryset=User.objects.all(),
+        write_only=True
     )
 
     invoiceId = serializers.PrimaryKeyRelatedField(
-        source="invoice", queryset=Invoice.objects.all(), write_only=True,required=False, allow_null=True
+        source="invoice",
+        queryset=Invoice.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
     )
 
     bankAccountId = serializers.PrimaryKeyRelatedField(
-        source="bankAccount", queryset=BankAccount.objects.all(), write_only=True
+        source="bankAccount",
+        queryset=BankAccount.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
     )
 
     categoryId = serializers.PrimaryKeyRelatedField(
-        source="category", queryset=Category.objects.all(), write_only=True
+        source="category",
+        queryset=Category.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
     )
 
     subcategoryId = serializers.PrimaryKeyRelatedField(
-        source="subcategory", queryset=Subcategory.objects.all(), write_only=True,required=False, allow_null=True
+        source="subcategory",
+        queryset=Subcategory.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
     )
 
     loanId = serializers.PrimaryKeyRelatedField(
-        source="loan", queryset=Loan.objects.all(), write_only=True, required=False, allow_null=True
+        source="loan",
+        queryset=Loan.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
     )
 
     bankAccount = BankAccountSerializer(read_only=True)
     category = CategorySerializer(read_only=True)
     subcategory = SubcategorySerializer(read_only=True)
+    invoice = InvoiceSerializer(read_only=True)
 
     class Meta:
         model = Transaction
@@ -385,6 +450,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "category",
             "bankAccount",
             "subcategory",
+            "invoice"
         ]
 
 class GoalSerializer(serializers.ModelSerializer):
