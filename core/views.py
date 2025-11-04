@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Sum, Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -139,12 +139,20 @@ class LoanViewSet(BaseModelViewSet):
     queryset = Loan.objects.all()
     serializer_class = LoanSerializer
 
-class TransactionViewSet(viewsets.ModelViewSet):
+class TransactionViewSet(OptionalPaginationViewSet):
     serializer_class = TransactionSerializer
 
     def get_queryset(self):
         queryset = Transaction.objects.all()
-        search = self.request.query_params.get("search", None)
+
+        user_id = self.request.query_params.get("user")
+        search = self.request.query_params.get("search")
+        month = self.request.query_params.get("date__month")
+        year = self.request.query_params.get("date__year")
+        ordering = self.request.query_params.get("ordering", "-date")
+
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
 
         if search:
             queryset = queryset.filter(
@@ -154,7 +162,43 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 | Q(subcategory__description__icontains=search)
             )
 
+        if month and year:
+            prefix = f"{year}-{int(month):02d}"
+            queryset = queryset.filter(date__startswith=prefix)
+
+        if ordering:
+            queryset = queryset.order_by(ordering)
+
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        total_income = queryset.filter(type__in=[4]).aggregate(total=Sum("value"))["total"] or 0
+        total_expense = queryset.filter(type__in=[3, 5]).aggregate(total=Sum("value"))["total"] or 0
+        total_balance = total_income - total_expense
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            paginated_response = self.get_paginated_response(serializer.data)
+
+            paginated_response.data["summary"] = {
+                "totalIncome": total_income,
+                "totalExpense": total_expense,
+                "balance": total_balance
+            }
+            return paginated_response
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "results": serializer.data,
+            "summary": {
+                "totalIncome": total_income,
+                "totalExpense": total_expense,
+                "balance": total_balance
+            }
+        })
 
 class GoalViewSet(OptionalPaginationViewSet):
     queryset = Goal.objects.all()
