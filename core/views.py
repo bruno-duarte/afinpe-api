@@ -9,7 +9,7 @@ from .serializers import (
     RegistrationSerializer, LogoutSerializer, SocialLoginSerializer, 
     MyTokenObtainPairSerializer
 )
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter, OpenApiTypes
 
 import requests
 
@@ -19,14 +19,18 @@ from .models import (
     Loan, Transaction, Goal, GoalTransaction, Alert
 )
 from .serializers import (
-    PersonSerializer, UserSerializer, UserCreateSerializer, ColorSerializer, IconSerializer,
+    PersonSerializer, UserSerializer, ColorSerializer, IconSerializer,
     BankSerializer, CurrencySerializer, BankAccountSerializer, BankAccountLimitSerializer,
     CreditCardFlagSerializer, CreditCardSerializer, InvoiceSerializer, CategorySerializer,
     SubcategorySerializer, PlanningSerializer, BudgetSerializer, LoanSerializer,
     TransactionSerializer, GoalSerializer, GoalTransactionSerializer, AlertSerializer,
-    RegistrationSerializer
+    RegistrationSerializer, PlanningSummaryResponseSerializer, PlanningCategoryItemSerializer
 )
 from .base import OptionalPaginationViewSet, BaseModelViewSet
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.db.models import Sum
+import calendar
 
 User = get_user_model()
 
@@ -134,6 +138,193 @@ class PlanningViewSet(OptionalPaginationViewSet):
 class BudgetViewSet(OptionalPaginationViewSet):
     queryset = Budget.objects.all()
     serializer_class = BudgetSerializer
+
+class PlanningSummaryView(APIView):
+    """
+    Retorna o resumo do planejamento do mês com filtro opcional de moeda.
+    Exemplo: /api/planning/summary/?user={user_id}&month=10&year=2024&currency=uuid
+    """
+
+    @extend_schema(
+        description="Retorna o resumo do planejamento mensal, com filtro opcional por moeda.",
+        parameters=[
+            OpenApiParameter(name='user', type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, description="ID do usuário", required=True),
+            OpenApiParameter(name='month', type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, description="Mês (1–12)", required=True),
+            OpenApiParameter(name='year', type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, description="Ano", required=True),
+            OpenApiParameter(name='currency', type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, description="UUID da moeda (opcional)", required=False),
+        ],
+        responses={
+            200: PlanningSummaryResponseSerializer,
+            400: OpenApiResponse(description="Parâmetros obrigatórios ausentes"),
+            404: OpenApiResponse(description="Planejamento não encontrado")
+        }
+    )
+    def get(self, request):
+        user_id = request.query_params.get("user")
+        month = request.query_params.get("month")
+        year = request.query_params.get("year")
+        currency_id = request.query_params.get("currency", None)
+
+        if not all([user_id, month, year]):
+            return Response({"detail": "Parâmetros obrigatórios: user, month, year"}, status=status.HTTP_400_BAD_REQUEST)
+
+        planning = (
+            Planning.objects
+            .select_related("currency")
+            .filter(user_id=user_id, month=month, year=year)
+            .first()
+        )
+
+        if not planning:
+            return Response({"detail": "Planejamento não encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Tipos de transação
+        INCOME_TYPES = [2]       # receita
+        EXPENSE_TYPES = [3, 5]   # despesa, despesa de cartão
+
+        base_filter = {
+            "user_id": user_id,
+            "date__startswith": f"{year}-{int(month):02d}",
+        }
+        if currency_id:
+            base_filter["bankAccount__currency_id"] = currency_id
+
+        planned_total = planning.monthlyIncome or 0
+
+        executed_total = (
+            Transaction.objects
+            .filter(**base_filter, type__in=EXPENSE_TYPES, paid=1)
+            .aggregate(total=Sum("value"))["total"] or 0
+        )
+
+        pending_total = (
+            Transaction.objects
+            .filter(**base_filter, type__in=EXPENSE_TYPES, paid=0)
+            .aggregate(total=Sum("value"))["total"] or 0
+        )
+
+        monthly_income = (
+            Transaction.objects
+            .filter(**base_filter, type__in=INCOME_TYPES)
+            .aggregate(total=Sum("value"))["total"] or 0
+        )
+
+        currency_data = CurrencySerializer(planning.currency).data if planning.currency else None
+
+        remaining = planned_total - executed_total
+        days_in_month = calendar.monthrange(int(year), int(month))[1]
+        available_per_day = remaining // days_in_month if days_in_month > 0 else 0
+
+        response_data = {
+            "id": str(planning.id),
+            "planned": int(planned_total),
+            "executed": int(executed_total),
+            "pending": int(pending_total),
+            "remaining": int(remaining),
+            "monthlyIncome": int(monthly_income),
+            "availablePerDay": int(available_per_day),
+            "currency": currency_data,
+        }
+
+        return Response(response_data)
+
+class PlanningCategoriesView(APIView):
+    """
+    Retorna o detalhamento do planejamento por categoria com filtro opcional de moeda.
+    Exemplo: /api/planning/categories/?user={user_id}&month=10&year=2024&currency=uuid
+    """
+
+    @extend_schema(
+        description="Retorna o detalhamento do planejamento por categoria, com filtro opcional por moeda.",
+        parameters=[
+            OpenApiParameter(name='user', type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, description="ID do usuário", required=True),
+            OpenApiParameter(name='month', type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, description="Mês (1–12)", required=True),
+            OpenApiParameter(name='year', type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, description="Ano", required=True),
+            OpenApiParameter(name='currency', type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, description="UUID da moeda (opcional)", required=False),
+        ],
+        responses={
+            200: PlanningCategoryItemSerializer(many=True),
+            400: OpenApiResponse(description="Parâmetros obrigatórios ausentes"),
+            404: OpenApiResponse(description="Planejamento não encontrado")
+        }
+    )
+    def get(self, request):
+        user_id = request.query_params.get("user")
+        month = request.query_params.get("month")
+        year = request.query_params.get("year")
+        currency_id = request.query_params.get("currency")
+
+        if not all([user_id, month, year]):
+            return Response({"detail": "Parâmetros obrigatórios: user, month, year"}, status=400)
+
+        planning = (
+            Planning.objects
+            .select_related("currency")
+            .filter(user_id=user_id, month=month, year=year)
+            .first()
+        )
+        if not planning:
+            return Response({"detail": "Planejamento não encontrado"}, status=404)
+
+        # Filtro base dos budgets
+        budget_filter = {"planning_id": planning.id}
+        if currency_id:
+            budget_filter["planning__currency_id"] = currency_id
+
+        budgets = (
+            Budget.objects
+            .filter(**budget_filter)
+            .select_related("category", "category__icon")
+        )
+
+        # Tipos de transação de despesa
+        expense_types = [3, 5]  # expense, creditCardExpense
+
+        data = []
+        for b in budgets:
+            # Filtro base de transações da categoria
+            transaction_filter = {
+                "user_id": user_id,
+                "category_id": b.category_id,
+                "date__startswith": f"{year}-{int(month):02d}",
+                "type__in": expense_types,
+            }
+            if currency_id:
+                transaction_filter["bankAccount__currency_id"] = currency_id
+
+            # Somatórios separados
+            executed = (
+                Transaction.objects.filter(**transaction_filter, paid=1)
+                .aggregate(total=Sum("value"))["total"] or 0
+            )
+            pending = (
+                Transaction.objects.filter(**transaction_filter, paid=0)
+                .aggregate(total=Sum("value"))["total"] or 0
+            )
+            total_spent = executed + pending
+
+            # Objeto da moeda do planejamento
+            planning_currency = None
+            if planning.currency:
+                planning_currency = {
+                    "id": str(planning.currency.id),
+                    "code": planning.currency.code,
+                    "symbol": planning.currency.symbol,
+                    "minorUnit": planning.currency.minorUnit,
+                }
+
+            data.append({
+                "id": str(b.id),
+                "planningId": str(planning.id),
+                "planningCurrency": planning_currency,
+                "category": CategorySerializer(b.category).data,
+                "planned": int(b.plannedValue),
+                "executed": int(executed),
+                "pending": int(pending),
+                "totalSpent": int(total_spent),
+            })
+
+        return Response(data)
 
 class LoanViewSet(BaseModelViewSet):
     queryset = Loan.objects.all()

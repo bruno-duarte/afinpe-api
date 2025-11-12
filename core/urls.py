@@ -10,6 +10,7 @@ from .views import (
     LoanViewSet, TransactionViewSet, GoalViewSet, GoalTransactionViewSet, AlertViewSet,
     SocialLoginViewSet, LoginViewSet
 )
+from .views import PlanningSummaryView, PlanningCategoriesView
 
 router = DefaultRouter()
 router.register(r"people", PersonViewSet, basename="person")
@@ -40,6 +41,11 @@ urlpatterns = [
     path("auth/jwt/create/", TokenObtainPairView.as_view(), name="jwt-create"),
     path("auth/jwt/refresh/", TokenRefreshView.as_view(), name="jwt-refresh"),
     path("auth/jwt/verify/", TokenVerifyView.as_view(), name="jwt-verify"),
+
+    # Plan endpoints
+    path("plannings/summary/", PlanningSummaryView.as_view(), name="planningSummary"),
+    path("plannings/categories/", PlanningCategoriesView.as_view(), name="planningCategories"),
+
     # Public signup and admin create
     path("", include(router.urls)),
 ]

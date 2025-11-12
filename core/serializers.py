@@ -358,6 +358,25 @@ class PlanningSerializer(serializers.ModelSerializer):
         instance.save()
         return Planning.objects.select_related("user", "currency").prefetch_related("budgets").get(pk=instance.pk)
 
+class PlanningSummaryResponseSerializer(serializers.Serializer):
+    id = serializers.CharField() 
+    planned = serializers.IntegerField()
+    executed = serializers.IntegerField()
+    remaining = serializers.IntegerField()
+    monthlyIncome = serializers.IntegerField()
+    availablePerDay = serializers.IntegerField()
+    currency = CurrencySerializer()
+
+class PlanningCategoryItemSerializer(serializers.Serializer):
+    id = serializers.CharField() 
+    planningId = serializers.CharField()  
+    planningCurrency = CurrencySerializer(allow_null=True) 
+    category = CategorySerializer()
+    planned = serializers.IntegerField()
+    executed = serializers.IntegerField()
+    pending = serializers.IntegerField()
+    totalSpent = serializers.IntegerField()
+
 class LoanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Loan
